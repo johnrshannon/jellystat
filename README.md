@@ -84,15 +84,10 @@ Both support:
 --has-trailer
 --has-extras
 --missing FIELD          overview, rating, genre, trailer, year
---sort FIELD             title, rating, year, added, runtime
---desc
-```
-
-Movies also support file-level filtering:
-
-```
 --resolution TEXT        4k, 1080p, 720p, 480p
 --min-size / --max-size MB
+--sort FIELD             title, rating, year, added, runtime
+--desc
 ```
 
 Shows also support:
