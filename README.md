@@ -76,17 +76,17 @@ Both support:
 
 ```
 --min-rating / --max-rating FLOAT
---after / --before YEAR
+--after / --before N
 --genre TEXT
---min-runtime / --max-runtime MINUTES
+--min-runtime / --max-runtime N
 --watched / --unwatched
 --min-plays N
 --has-trailer
 --has-extras
---missing FIELD          overview, rating, genre, trailer, year
+--missing TEXT           overview, rating, genre, trailer, year
 --resolution TEXT        4k, 1080p, 720p, 480p
---min-size / --max-size MB
---sort FIELD             title, rating, year, added, runtime
+--min-size / --max-size N
+--sort TEXT              title, rating, year, added, runtime
 --desc
 ```
 
