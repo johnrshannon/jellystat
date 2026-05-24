@@ -14,13 +14,13 @@ CLI tool for querying a Jellyfin media server. Two layers: server metadata and l
 ## Installation
 
 ```
-pip install git+https://github.com/username/jellystat
+pip install git+https://github.com/johnrshannon/jellystat
 ```
 
 For local development:
 
 ```
-git clone https://github.com/username/jellystat
+git clone https://github.com/johnrshannon/jellystat
 cd jellystat
 pip install -e .
 ```
