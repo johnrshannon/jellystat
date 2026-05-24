@@ -66,9 +66,11 @@ jellystat server tasks       Scheduled tasks and last run status
 ### Library
 
 ```
-jellystat movies    Query the movie library
-jellystat shows     Query the TV library
+jellystat movies    Query all movies
+jellystat shows     Query all TV shows
 ```
+
+These query by content type across all libraries, regardless of how your libraries are named or organized.
 
 Both support:
 
