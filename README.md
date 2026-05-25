@@ -27,6 +27,8 @@ pip install -e .
 
 > **Windows:** If `jellystat` isn't found after install, add Python's Scripts folder to your PATH: `C:\Users\<you>\AppData\Local\Programs\Python\Python3x\Scripts\`
 
+> **macOS:** If pip refuses with an "externally managed environment" error, add `--break-system-packages` to the install command. This is a Python packaging convention that protects system-managed environments. The flag tells pip you're intentionally installing outside a virtualenv.
+
 ---
 
 ## Configuration
