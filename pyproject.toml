@@ -1,16 +1,17 @@
 [build-system]
 requires = ["setuptools>=61"]
-build-backend = "setuptools.backends.legacy:build"
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "jellystat"
 version = "0.1.0"
 description = "CLI tool for querying a Jellyfin media server"
-requires-python = ">=3.11"
+requires-python = ">=3.10"
 dependencies = [
     "requests",
     "rich",
     "platformdirs",
+    "tomli; python_version < '3.11'",
 ]
 
 [project.scripts]

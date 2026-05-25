@@ -6,7 +6,7 @@ CLI tool for querying a Jellyfin media server. Two layers: server metadata and l
 
 ## Requirements
 
-- Python 3.11+
+- Python 3.10+
 - A Jellyfin server with API access
 
 ---
