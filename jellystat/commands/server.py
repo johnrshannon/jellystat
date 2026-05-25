@@ -90,23 +90,47 @@ def _sessions(args, client: JellyfinClient):
     ], args.format)
 
 
+_COLLECTION_ITEM_TYPE = {
+    "movies":       "Movie",
+    "tvshows":      "Episode",
+    "music":        "Audio",
+    "musicvideos":  "MusicVideo",
+    "books":        "Book",
+}
+
+
 def _storage(args, client: JellyfinClient):
     libraries = client.get("/Library/MediaFolders")
     rows = []
     for lib in libraries.get("Items", []):
-        # Fetch just enough to get the total count without pulling all items
-        result = client.get("/Items", params={
-            "ParentId": lib["Id"],
+        collection_type = lib.get("CollectionType", "")
+        params = {
+            "ParentId":  lib["Id"],
             "Recursive": "true",
-            "Limit": 1,
-        })
+            "Fields":    "MediaSources",
+        }
+        item_type = _COLLECTION_ITEM_TYPE.get(collection_type)
+        if item_type:
+            params["IncludeItemTypes"] = item_type
+
+        items = client.get_items(params)
+        total_bytes = sum((i.get("MediaSources") or [{}])[0].get("Size", 0) for i in items)
+        gb = total_bytes / (1024 ** 3)
+        size_str = f"{gb:.2f} GB" if total_bytes else ""
+
         rows.append({
             "Library": lib.get("Name", ""),
-            "Type":    lib.get("CollectionType", "").replace("_", " ").title(),
-            "Items":   result.get("TotalRecordCount", 0),
+            "Type":    collection_type.replace("_", " ").title(),
+            "Items":   len(items),
+            "Size":    size_str,
         })
 
-    output.display(rows, [("Library", "Library"), ("Type", "Type"), ("Items", "Items")], args.format)
+    output.display(rows, [
+        ("Library", "Library"),
+        ("Type",    "Type"),
+        ("Items",   "Items",  "right"),
+        ("Size",    "Size",   "right"),
+    ], args.format)
 
 
 def _users(args, client: JellyfinClient):
