@@ -17,6 +17,18 @@ def size_mb(item: dict) -> float:
     return sources[0].get("Size", 0) / (1024 * 1024) if sources else 0.0
 
 
+def format_bytes(n: float) -> str:
+    if not n:
+        return ""
+    if n >= 1024 ** 4:
+        return f"{n / 1024 ** 4:.2f} TB"
+    if n >= 1024 ** 3:
+        return f"{n / 1024 ** 3:.2f} GB"
+    if n >= 1024 ** 2:
+        return f"{n / 1024 ** 2:.0f} MB"
+    return f"{n / 1024:.0f} KB"
+
+
 def runtime_str(item: dict) -> str:
     ticks = item.get("RunTimeTicks") or 0
     minutes = ticks // 600_000_000

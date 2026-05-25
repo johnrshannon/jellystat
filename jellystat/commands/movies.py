@@ -117,8 +117,8 @@ def handle(args, client: JellyfinClient):
 
 def _to_row(item: dict) -> dict:
     rating = item.get("CommunityRating")
-    mb = utils.size_mb(item)
-    size_str = f"{mb / 1024:.2f} GB" if mb >= 1024 else f"{mb:.0f} MB" if mb else ""
+    sources = item.get("MediaSources") or []
+    raw_bytes = sources[0].get("Size", 0) if sources else 0
 
     return {
         "Title":      item.get("Name", ""),
@@ -127,5 +127,5 @@ def _to_row(item: dict) -> dict:
         "Runtime":    utils.runtime_str(item),
         "Genres":     ", ".join(item.get("Genres", [])[:2]),
         "Resolution": utils.resolution(item),
-        "Size":       size_str,
+        "Size":       utils.format_bytes(raw_bytes),
     }

@@ -38,6 +38,12 @@ def register(subparsers):
     output.add_library_args(rewatched)
     output.add_output_args(rewatched)
 
+    recent = subparsers.add_parser("recently-added", help="Items added in the last N days")
+    recent.add_argument("--type", choices=["movies", "shows", "all"], default="all")
+    recent.add_argument("--days", type=int, default=30, metavar="N", help="look back N days (default: 30)")
+    output.add_library_args(recent)
+    output.add_output_args(recent)
+
 
 def handle(args, client: JellyfinClient):
     if args.command == "stats":
@@ -46,6 +52,8 @@ def handle(args, client: JellyfinClient):
         _forgotten(args, client)
     elif args.command == "rewatched":
         _rewatched(args, client)
+    elif args.command == "recently-added":
+        _recently_added(args, client)
 
 
 def _stats(args, client: JellyfinClient):
@@ -228,3 +236,53 @@ def _rewatched(args, client: JellyfinClient):
         ("Plays",       "Plays"),
         ("Last played", "Last played"),
     ], args.format)
+
+
+def _recently_added(args, client: JellyfinClient):
+    params = {
+        "IncludeItemTypes": TYPE_MAP[args.type],
+        "Recursive":        "true",
+        "Fields":           "UserData,DateCreated",
+        "UserId":           client.user_id,
+        "SortBy":           "DateCreated",
+        "SortOrder":        "Descending",
+    }
+    if args.library or args.exclude_library:
+        items = client.get_items_by_library(params, include=args.library, exclude=args.exclude_library)
+        items.sort(key=lambda i: i.get("DateCreated", ""), reverse=True)
+    else:
+        items = client.get_items(params)
+
+    now = datetime.now(timezone.utc)
+    items = [i for i in items if i.get("DateCreated") and (now - _parse_dt(i["DateCreated"])).days <= args.days]
+
+    if args.limit:
+        items = items[:args.limit]
+
+    show_type = args.type == "all"
+    cols = [
+        ("Title",  "Title"),
+        ("Type",   "Type"),
+        ("Year",   "Year",   "center"),
+        ("Rating", "Rating", "center"),
+        ("Added",  "Added"),
+    ] if show_type else [
+        ("Title",  "Title"),
+        ("Year",   "Year",   "center"),
+        ("Rating", "Rating", "center"),
+        ("Added",  "Added"),
+    ]
+
+    rows = []
+    for item in items:
+        raw = item.get("DateCreated", "")
+        rating = item.get("CommunityRating")
+        rows.append({
+            "Title":  item.get("Name", ""),
+            "Type":   item.get("Type", ""),
+            "Year":   item.get("ProductionYear", ""),
+            "Rating": f"{rating:.1f}" if rating else "",
+            "Added":  raw[:10] if raw else "",
+        })
+
+    output.display(rows, cols, args.format)

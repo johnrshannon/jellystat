@@ -39,5 +39,5 @@ def main():
         movies.handle(args, client)
     elif args.command == "shows":
         shows.handle(args, client)
-    elif args.command in ("stats", "forgotten", "rewatched"):
+    elif args.command in ("stats", "forgotten", "rewatched", "recently-added"):
         special.handle(args, client)

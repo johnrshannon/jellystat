@@ -1,4 +1,4 @@
-from jellystat import output
+from jellystat import output, utils
 from jellystat.client import JellyfinClient
 
 
@@ -115,8 +115,7 @@ def _storage(args, client: JellyfinClient):
 
         items = client.get_items(params)
         total_bytes = sum((i.get("MediaSources") or [{}])[0].get("Size", 0) for i in items)
-        gb = total_bytes / (1024 ** 3)
-        size_str = f"{gb:.2f} GB" if total_bytes else ""
+        size_str = utils.format_bytes(total_bytes)
 
         rows.append({
             "Library": lib.get("Name", ""),
