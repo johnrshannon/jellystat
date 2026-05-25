@@ -1,13 +1,22 @@
 import sys
-import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
+try:
+    import tomllib
+except ImportError:
+    import tomli as tomllib
+
 import requests
 from platformdirs import user_config_dir
+from rich.console import Console
+from rich.panel import Panel
+from rich.prompt import Prompt
 
 CONFIG_DIR = Path(user_config_dir("jellystat"))
 CONFIG_FILE = CONFIG_DIR / "config.toml"
+
+console = Console()
 
 
 @dataclass
@@ -20,7 +29,7 @@ class Config:
 
 def load() -> Config:
     if not CONFIG_FILE.exists():
-        print("No config found. Run 'jellystat configure' to get started.")
+        console.print("[red]No config found.[/red] Run 'jellystat configure' to get started.")
         sys.exit(1)
 
     with open(CONFIG_FILE, "rb") as f:
@@ -44,50 +53,55 @@ def save(config: Config) -> None:
 
 
 def run_wizard() -> None:
-    print()
-    server_url = input("Jellyfin server URL: ").strip().rstrip("/")
-    api_key = input("Jellyfin API key: ").strip()
+    console.print(Panel("[bold]jellystat setup[/bold]", expand=False))
+    console.print()
 
-    print("\nConnecting to server...", end=" ", flush=True)
+    server_url = Prompt.ask("[cyan]Jellyfin server URL[/cyan]").strip().rstrip("/")
+    if not server_url.startswith(("http://", "https://")):
+        server_url = "http://" + server_url
+        console.print(f"  [dim]→ using {server_url}[/dim]")
+
+    api_key = Prompt.ask("[cyan]Jellyfin API key[/cyan]").strip()
+    console.print()
 
     # Direct requests call here to avoid a circular import with client.py,
     # which depends on config. This is the one place that's acceptable.
     headers = {"X-Emby-Token": api_key}
     try:
-        resp = requests.get(f"{server_url}/Users", headers=headers, timeout=10)
-        resp.raise_for_status()
+        with console.status("Connecting to server..."):
+            resp = requests.get(f"{server_url}/Users", headers=headers, timeout=10)
+            resp.raise_for_status()
     except requests.exceptions.ConnectionError:
-        print("failed (could not connect)")
+        console.print("[red]✗[/red] Could not connect to server.")
         sys.exit(1)
     except requests.exceptions.HTTPError:
-        print("failed (check your API key)")
+        console.print("[red]✗[/red] Server rejected the request — check your API key.")
         sys.exit(1)
     except requests.exceptions.Timeout:
-        print("timed out")
+        console.print("[red]✗[/red] Connection timed out.")
         sys.exit(1)
 
-    print("OK")
+    console.print("[green]Connected.[/green]\n")
 
     users = resp.json()
     if not users:
-        print("No users found on this server.")
+        console.print("[red]No users found on this server.[/red]")
         sys.exit(1)
 
     if len(users) == 1:
         user = users[0]
-        print(f"Found 1 user: {user['Name']}")
-        print(f"Using {user['Name']} automatically.")
+        console.print(f"Found 1 user: [bold]{user['Name']}[/bold] — selecting automatically.")
     else:
-        print(f"\nFound {len(users)} users:")
+        console.print(f"Found {len(users)} users:")
         for i, u in enumerate(users, 1):
-            print(f"  {i}. {u['Name']}")
-        print()
+            console.print(f"  [dim]{i}.[/dim] {u['Name']}")
+        console.print()
         while True:
-            choice = input(f"Select a user (1-{len(users)}): ").strip()
+            choice = Prompt.ask(f"[cyan]Select a user (1-{len(users)})[/cyan]").strip()
             if choice.isdigit() and 1 <= int(choice) <= len(users):
                 user = users[int(choice) - 1]
                 break
-            print("Invalid selection, try again.")
+            console.print("[yellow]Invalid selection, try again.[/yellow]")
 
     config = Config(
         server_url=server_url,
@@ -96,4 +110,10 @@ def run_wizard() -> None:
         user_id=user["Id"],
     )
     save(config)
-    print(f"\nConfig saved to {CONFIG_FILE}")
+
+    console.print()
+    console.print(Panel(
+        f"[green]All set![/green] Logged in as [bold]{user['Name']}[/bold]\n"
+        f"[dim]Config saved to {CONFIG_FILE}[/dim]",
+        expand=False,
+    ))
