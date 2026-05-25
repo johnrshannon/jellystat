@@ -41,9 +41,7 @@ def register(subparsers):
     p.add_argument("--sort", choices=list(SORT_MAP.keys()), default="title")
     p.add_argument("--desc", action="store_true")
     p.add_argument("--columns", metavar="TEXT", help="comma-separated list of columns to show (title,year,rating,status,seasons,genres)")
-    p.add_argument("--library", metavar="TEXT", action="append", help="only include this library")
-    p.add_argument("--exclude-library", metavar="TEXT", action="append", dest="exclude_library", help="exclude this library")
-
+    output.add_library_args(p)
     output.add_output_args(p)
 
 

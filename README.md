@@ -90,6 +90,16 @@ Both support:
 --min-size / --max-size N
 --sort TEXT              title, rating, year, added, runtime
 --desc
+--library TEXT           only include items from this library (repeatable)
+--exclude-library TEXT   exclude items from this library (repeatable)
+--columns TEXT           comma-separated list of columns to show
+```
+
+`--library` and `--exclude-library` are useful when you have multiple libraries of the same type — e.g., separate movie libraries for different users or categories. Both flags can be repeated.
+
+```
+jellystat movies --exclude-library "MMA Fights" --exclude-library "Comedy Specials"
+jellystat movies --library "Films" --columns title,year,rating
 ```
 
 Shows also support:
@@ -105,14 +115,17 @@ Shows also support:
 ```
 jellystat stats        Aggregate counts, runtime, storage, genre and decade breakdown
                        --type [movies|shows|all]
+                       --library / --exclude-library TEXT
 
 jellystat forgotten    Items added a while ago that haven't been watched
                        --type [movies|shows|all]
                        --days N    Minimum days since added (default: 180)
+                       --library / --exclude-library TEXT
 
 jellystat rewatched    Items watched more than once
                        --type [movies|shows|all]
                        --min-plays N    (default: 2)
+                       --library / --exclude-library TEXT
 ```
 
 ---

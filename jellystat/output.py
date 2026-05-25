@@ -43,6 +43,11 @@ def add_output_args(parser) -> None:
     parser.add_argument("--limit", type=int, metavar="N")
 
 
+def add_library_args(parser) -> None:
+    parser.add_argument("--library", metavar="TEXT", action="append", help="only include this library")
+    parser.add_argument("--exclude-library", metavar="TEXT", action="append", dest="exclude_library", help="exclude this library")
+
+
 def _table(items: list[dict], columns: list[tuple[str, str]]) -> None:
     table = Table(show_header=True, header_style="bold", row_styles=["", "dim"])
 

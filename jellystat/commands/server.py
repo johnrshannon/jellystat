@@ -42,13 +42,27 @@ def handle(args, client: JellyfinClient):
 def _info(args, client: JellyfinClient):
     data = client.get("/System/Info")
     pairs = [
-        ("Server name",  data.get("ServerName", "")),
-        ("Version",      data.get("Version", "")),
-        ("OS",           data.get("OperatingSystem", "")),
-        ("Architecture", data.get("SystemArchitecture", "")),
-        ("Local URL",    data.get("LocalAddress", "")),
+        ("Server name",    data.get("ServerName", "")),
+        ("Version",        data.get("Version", "")),
+        ("OS",             _infer_os(data)),
+        ("Architecture",   data.get("SystemArchitecture", "")),
+        ("Local URL",      data.get("LocalAddress", "")),
+        ("Update available", "yes" if data.get("HasUpdateAvailable") else "no"),
     ]
     output.display_kv(pairs, args.format)
+
+
+def _infer_os(data: dict) -> str:
+    # OperatingSystem is blank in some Jellyfin versions; fall back to path sniffing
+    os_field = data.get("OperatingSystem") or data.get("OperatingSystemDisplayName", "")
+    if os_field:
+        return os_field
+    path = data.get("ProgramDataPath", "")
+    if len(path) > 1 and path[1] == ":":
+        return "Windows"
+    if path.startswith("/"):
+        return "Linux/macOS"
+    return ""
 
 
 def _sessions(args, client: JellyfinClient):

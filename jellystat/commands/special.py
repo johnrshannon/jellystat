@@ -1,8 +1,17 @@
 import json
+import re
 from datetime import datetime, timezone
 
 from jellystat import output
 from jellystat.client import JellyfinClient
+
+def _parse_dt(s: str) -> datetime:
+    # Python 3.10 fromisoformat requires exactly 0 or 6 fractional second digits.
+    # Jellyfin returns varying lengths, so normalize to 6.
+    s = s.replace("Z", "+00:00")
+    s = re.sub(r"\.(\d+)", lambda m: "." + (m.group(1) + "000000")[:6], s)
+    return datetime.fromisoformat(s)
+
 
 TYPE_MAP = {
     "movies": "Movie",
@@ -14,16 +23,19 @@ TYPE_MAP = {
 def register(subparsers):
     stats = subparsers.add_parser("stats", help="Aggregate library statistics")
     stats.add_argument("--type", choices=["movies", "shows", "all"], default="all")
+    output.add_library_args(stats)
     output.add_output_args(stats)
 
     forgotten = subparsers.add_parser("forgotten", help="Items added long ago that haven't been watched")
     forgotten.add_argument("--type", choices=["movies", "shows", "all"], default="all")
     forgotten.add_argument("--days", type=int, default=180, metavar="N", help="minimum days since added (default: 180)")
+    output.add_library_args(forgotten)
     output.add_output_args(forgotten)
 
     rewatched = subparsers.add_parser("rewatched", help="Items watched more than once")
     rewatched.add_argument("--type", choices=["movies", "shows", "all"], default="all")
     rewatched.add_argument("--min-plays", type=int, default=2, metavar="N")
+    output.add_library_args(rewatched)
     output.add_output_args(rewatched)
 
 
@@ -37,12 +49,16 @@ def handle(args, client: JellyfinClient):
 
 
 def _stats(args, client: JellyfinClient):
-    items = client.get_items({
+    params = {
         "IncludeItemTypes": TYPE_MAP[args.type],
         "Recursive":        "true",
         "Fields":           "Genres,MediaSources,UserData",
         "UserId":           client.user_id,
-    })
+    }
+    if args.library or args.exclude_library:
+        items = client.get_items_by_library(params, include=args.library, exclude=args.exclude_library)
+    else:
+        items = client.get_items(params)
 
     total_ticks = sum(i.get("RunTimeTicks") or 0 for i in items)
     total_hours = total_ticks // 36_000_000_000
@@ -99,12 +115,16 @@ def _stats(args, client: JellyfinClient):
 
 
 def _forgotten(args, client: JellyfinClient):
-    items = client.get_items({
+    params = {
         "IncludeItemTypes": TYPE_MAP[args.type],
         "Recursive":        "true",
         "Fields":           "UserData,DateCreated",
         "UserId":           client.user_id,
-    })
+    }
+    if args.library or args.exclude_library:
+        items = client.get_items_by_library(params, include=args.library, exclude=args.exclude_library)
+    else:
+        items = client.get_items(params)
 
     now = datetime.now(timezone.utc)
     cutoff = args.days
@@ -114,12 +134,12 @@ def _forgotten(args, client: JellyfinClient):
         raw = item.get("DateCreated", "")
         if not raw:
             continue
-        added = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        added = _parse_dt(raw)
         if (now - added).days < cutoff:
             continue
         scored.append((_forgotten_score(item, now), item))
 
-    scored.sort(reverse=True)
+    scored.sort(key=lambda x: x[0], reverse=True)
 
     if args.limit:
         scored = scored[:args.limit]
@@ -151,7 +171,7 @@ def _forgotten_score(item: dict, now: datetime) -> float:
     played = ud.get("Played", False)
 
     raw_added = item.get("DateCreated", "")
-    added = datetime.fromisoformat(raw_added.replace("Z", "+00:00")) if raw_added else now
+    added = _parse_dt(raw_added) if raw_added else now
     days_since_added = (now - added).days
 
     score = float(days_since_added)
@@ -161,7 +181,7 @@ def _forgotten_score(item: dict, now: datetime) -> float:
     else:
         raw_lp = ud.get("LastPlayedDate", "")
         if raw_lp:
-            last_played = datetime.fromisoformat(raw_lp.replace("Z", "+00:00"))
+            last_played = _parse_dt(raw_lp)
             score += (now - last_played).days * 0.3
 
     # Higher-rated items rank higher as a tiebreaker toward worthwhile content
@@ -172,13 +192,17 @@ def _forgotten_score(item: dict, now: datetime) -> float:
 
 
 def _rewatched(args, client: JellyfinClient):
-    items = client.get_items({
+    params = {
         "IncludeItemTypes": TYPE_MAP[args.type],
         "Recursive":        "true",
         "Fields":           "UserData",
         "UserId":           client.user_id,
         "Filters":          "IsPlayed",
-    })
+    }
+    if args.library or args.exclude_library:
+        items = client.get_items_by_library(params, include=args.library, exclude=args.exclude_library)
+    else:
+        items = client.get_items(params)
 
     min_plays = args.min_plays
     items = [i for i in items if i.get("UserData", {}).get("PlayCount", 0) >= min_plays]
