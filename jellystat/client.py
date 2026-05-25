@@ -32,6 +32,34 @@ class JellyfinClient:
             sys.exit(1)
         return resp.json()
 
+    def get_libraries(self) -> list[dict]:
+        return self.get("/Library/MediaFolders").get("Items", [])
+
+    def get_items_by_library(
+        self,
+        params: dict,
+        include: list[str] | None = None,
+        exclude: list[str] | None = None,
+    ) -> list[dict]:
+        libraries = self.get_libraries()
+
+        selected = []
+        for lib in libraries:
+            name = lib.get("Name", "").lower()
+            if exclude and any(e.lower() == name for e in exclude):
+                continue
+            if include and not any(i.lower() == name for i in include):
+                continue
+            selected.append(lib)
+
+        items = []
+        for lib in selected:
+            lib_params = dict(params)
+            lib_params["ParentId"] = lib["Id"]
+            items.extend(self.get_items(lib_params))
+
+        return items
+
     def get_items(self, params: dict | None = None) -> list[dict]:
         # Handles Jellyfin's StartIndex/TotalRecordCount pagination transparently.
         # Callers always get a flat list regardless of how many pages it took.
