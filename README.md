@@ -126,6 +126,11 @@ jellystat rewatched    Items watched more than once
                        --type [movies|shows|all]
                        --min-plays N    (default: 2)
                        --library / --exclude-library TEXT
+
+jellystat recently-added    Items added in the last N days, sorted by date
+                            --type [movies|shows|all]
+                            --days N    Look back window (default: 30)
+                            --library / --exclude-library TEXT
 ```
 
 ---
