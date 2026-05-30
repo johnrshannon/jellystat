@@ -6,6 +6,7 @@ from requests import Session
 
 from jellystat.config import Config
 
+# Large enough to keep request count low; small enough that individual responses stay fast.
 PAGE_SIZE = 500
 
 
@@ -63,7 +64,7 @@ class JellyfinClient:
     def get_items(self, params: dict | None = None) -> list[dict]:
         # Handles Jellyfin's StartIndex/TotalRecordCount pagination transparently.
         # Callers always get a flat list regardless of how many pages it took.
-        params = dict(params or {})
+        params = dict(params or {})  # copy so we don't mutate the caller's dict when injecting pagination keys
         params["Limit"] = PAGE_SIZE
         params["StartIndex"] = 0
 

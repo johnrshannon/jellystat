@@ -49,7 +49,7 @@ def add_library_args(parser) -> None:
 
 
 def _table(items: list[dict], columns: list[tuple[str, str]]) -> None:
-    table = Table(show_header=True, header_style="bold", row_styles=["", "dim"])
+    table = Table(show_header=True, header_style="bold", row_styles=["", "dim"])  # alternating dim rows for readability
 
     for col in columns:
         header = col[0]

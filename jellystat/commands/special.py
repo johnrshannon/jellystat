@@ -16,7 +16,7 @@ def _parse_dt(s: str) -> datetime:
 TYPE_MAP = {
     "movies": "Movie",
     "shows":  "Series",
-    "all":    "Movie,Series",
+    "all":    "Movie,Series",  # Jellyfin accepts a comma-separated list for IncludeItemTypes
 }
 
 
@@ -184,6 +184,9 @@ def _forgotten_score(item: dict, now: datetime) -> float:
 
     score = float(days_since_added)
 
+    # Unplayed items get a 1.5x boost — the point of the command is to surface things
+    # you haven't seen. Played items still appear but are penalized less aggressively;
+    # days since last played adds a smaller weight so recently rewatched items rank lower.
     if not played:
         score *= 1.5
     else:
@@ -192,7 +195,8 @@ def _forgotten_score(item: dict, now: datetime) -> float:
             last_played = _parse_dt(raw_lp)
             score += (now - last_played).days * 0.3
 
-    # Higher-rated items rank higher as a tiebreaker toward worthwhile content
+    # Higher-rated items rank higher as a tiebreaker toward worthwhile content.
+    # Dividing by 5.0 means a 10.0-rated item scores 2x a 5.0-rated item at equal age.
     rating = item.get("CommunityRating") or 5.0
     score *= rating / 5.0
 
@@ -249,11 +253,13 @@ def _recently_added(args, client: JellyfinClient):
     }
     if args.library or args.exclude_library:
         items = client.get_items_by_library(params, include=args.library, exclude=args.exclude_library)
+        # get_items_by_library concatenates per-library results, so the server-side sort order is lost.
         items.sort(key=lambda i: i.get("DateCreated", ""), reverse=True)
     else:
         items = client.get_items(params)
 
     now = datetime.now(timezone.utc)
+    # Jellyfin has no MinDateCreated filter, so we filter by --days client-side.
     items = [i for i in items if i.get("DateCreated") and (now - _parse_dt(i["DateCreated"])).days <= args.days]
 
     if args.limit:

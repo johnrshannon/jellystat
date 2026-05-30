@@ -90,6 +90,8 @@ def _sessions(args, client: JellyfinClient):
     ], args.format)
 
 
+# Maps library collection type to the item type that actually carries MediaSources.
+# TV series and seasons have no file size — it lives on the individual episode.
 _COLLECTION_ITEM_TYPE = {
     "movies":       "Movie",
     "tvshows":      "Episode",
@@ -112,6 +114,8 @@ def _storage(args, client: JellyfinClient):
         item_type = _COLLECTION_ITEM_TYPE.get(collection_type)
         if item_type:
             params["IncludeItemTypes"] = item_type
+        # If the collection type isn't mapped (playlists, boxsets, etc.) we fetch without
+        # a type filter. Those libraries rarely have MediaSources, so size will come back 0.
 
         items = client.get_items(params)
         total_bytes = sum((i.get("MediaSources") or [{}])[0].get("Size", 0) for i in items)

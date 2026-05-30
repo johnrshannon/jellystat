@@ -88,7 +88,8 @@ def handle(args, client: JellyfinClient):
     else:
         items = client.get_items(params)
 
-    # Client-side filters for things the API doesn't support natively
+    # Client-side filters for things the API doesn't support natively.
+    # min_rating maps to MinCommunityRating on the server; max_rating has no equivalent param.
     if args.max_rating is not None:
         items = [i for i in items if i.get("CommunityRating") and i["CommunityRating"] <= args.max_rating]
     if args.resolution:

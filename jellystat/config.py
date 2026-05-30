@@ -36,7 +36,7 @@ def load() -> Config:
         data = tomllib.load(f)
 
     return Config(
-        server_url=data["server_url"].rstrip("/"),
+        server_url=data["server_url"].rstrip("/"),  # normalize so appending paths never produces double slashes
         api_key=data["api_key"],
         username=data["username"],
         user_id=data["user_id"],
