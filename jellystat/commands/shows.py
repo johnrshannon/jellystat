@@ -21,9 +21,9 @@ COLUMNS = [
     ("Genres",  "Genres"),
 ]
 
-# Size lives on episodes, not series — so it requires a separate query and isn't
-# included in the default column set. Added to output only when explicitly requested.
-SIZE_COLUMN = ("Size", "Size", "right")
+# Size and resolution live on episodes, not series — separate query, opt-in columns.
+SIZE_COLUMN       = ("Size",       "Size",       "right")
+RESOLUTION_COLUMN = ("Resolution", "Resolution", "center")
 
 
 def register(subparsers):
@@ -37,7 +37,8 @@ def register(subparsers):
     p.add_argument("--status", choices=["ended", "continuing"], metavar="TEXT")
     p.add_argument("--min-seasons", type=int, metavar="N")
     p.add_argument("--max-seasons", type=int, metavar="N")
-    p.add_argument("--title", metavar="TEXT", help="filter by title (case-insensitive substring)")
+    p.add_argument("--title",      metavar="TEXT", help="filter by title (case-insensitive substring)")
+    p.add_argument("--resolution", metavar="TEXT", help="filter by resolution (e.g. 480p, 720p, 1080p, 4k) — matches if any episode is that resolution")
     p.add_argument("--missing", choices=["overview", "rating", "genre", "year"], metavar="TEXT")
 
     watched = p.add_mutually_exclusive_group()
@@ -95,17 +96,21 @@ def handle(args, client: JellyfinClient):
     if args.sort == "seasons":
         items.sort(key=lambda i: i.get("ChildCount", 0), reverse=args.desc)
 
-    # Size sorting/display requires fetching all episodes and summing per series.
-    # Jellyfin doesn't expose total size on the Series item itself — it only exists
-    # at the episode (leaf) level. One extra query beats N queries (one per show).
-    want_size = args.sort == "size" or (
-        args.columns and "size" in {c.strip().lower() for c in args.columns.split(",")}
-    )
-    if want_size:
+    col_set = {c.strip().lower() for c in args.columns.split(",")} if args.columns else set()
+    want_size       = args.sort == "size" or "size" in col_set
+    want_resolution = args.resolution or "resolution" in col_set
+
+    if want_size or want_resolution:
+        fields = []
+        if want_size:
+            fields.append("MediaSources")
+        if want_resolution:
+            fields.append("MediaStreams")
+
         ep_params = {
             "IncludeItemTypes": "Episode",
             "Recursive":        "true",
-            "Fields":           "MediaSources",
+            "Fields":           ",".join(fields),
             "UserId":           client.user_id,
         }
         if args.library or args.exclude_library:
@@ -114,14 +119,26 @@ def handle(args, client: JellyfinClient):
             episodes = client.get_items(ep_params)
 
         series_sizes: dict[str, int] = {}
+        series_resolutions: dict[str, set] = {}
         for ep in episodes:
             sid = ep.get("SeriesId")
-            if sid:
+            if not sid:
+                continue
+            if want_size:
                 sz = (ep.get("MediaSources") or [{}])[0].get("Size", 0)
                 series_sizes[sid] = series_sizes.get(sid, 0) + sz
+            if want_resolution:
+                res = utils.resolution(ep)
+                if res:
+                    series_resolutions.setdefault(sid, set()).add(res)
 
         for item in items:
             item["_size"] = series_sizes.get(item["Id"], 0)
+            resolutions = series_resolutions.get(item["Id"], set())
+            item["_resolution"] = "/".join(sorted(resolutions, key=lambda r: utils.RES_ORDER.get(r, -1)))
+
+    if args.resolution:
+        items = [i for i in items if args.resolution in i.get("_resolution", "")]
 
     if args.sort == "size":
         items.sort(key=lambda i: i.get("_size", 0), reverse=args.desc)
@@ -129,12 +146,15 @@ def handle(args, client: JellyfinClient):
     if args.limit:
         items = items[:args.limit]
 
-    all_cols = COLUMNS + [SIZE_COLUMN]
+    all_cols = COLUMNS + [SIZE_COLUMN, RESOLUTION_COLUMN]
     if args.columns:
-        selected = {c.strip().lower() for c in args.columns.split(",")}
-        cols = [col for col in all_cols if col[0].lower() in selected]
-    elif want_size:
+        cols = [col for col in all_cols if col[0].lower() in col_set]
+    elif want_size and not want_resolution:
         cols = COLUMNS + [SIZE_COLUMN]
+    elif want_resolution and not want_size:
+        cols = COLUMNS + [RESOLUTION_COLUMN]
+    elif want_size and want_resolution:
+        cols = COLUMNS + [SIZE_COLUMN, RESOLUTION_COLUMN]
     else:
         cols = COLUMNS
 
@@ -155,5 +175,6 @@ def _to_row(item: dict) -> dict:
         "Status":  item.get("Status", ""),
         "Seasons": item.get("ChildCount") or item.get("NumberOfSeasons") or "",  # field name varies by Jellyfin version
         "Genres":  ", ".join(item.get("Genres", [])[:2]),
-        "Size":    utils.format_bytes(item.get("_size", 0)),
+        "Size":       utils.format_bytes(item.get("_size", 0)),
+        "Resolution": item.get("_resolution", ""),
     }

@@ -1,12 +1,16 @@
+RES_ORDER = {"480p": 0, "720p": 1, "1080p": 2, "4k": 3}
+
+
 def resolution(item: dict) -> str:
     for stream in item.get("MediaStreams", []):
         if stream.get("Type") == "Video":
-            height = stream.get("Height", 0)
-            if height >= 2160:
+            w = stream.get("Width", 0)
+            h = stream.get("Height", 0)
+            if w >= 3840 or h >= 2160:
                 return "4k"
-            if height >= 1080:
+            if w >= 1920 or h >= 1080:
                 return "1080p"
-            if height >= 720:
+            if w >= 1280 or h >= 720:
                 return "720p"
             return "480p"
     return ""
