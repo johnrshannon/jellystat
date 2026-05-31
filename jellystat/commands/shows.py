@@ -37,6 +37,7 @@ def register(subparsers):
     p.add_argument("--status", choices=["ended", "continuing"], metavar="TEXT")
     p.add_argument("--min-seasons", type=int, metavar="N")
     p.add_argument("--max-seasons", type=int, metavar="N")
+    p.add_argument("--title", metavar="TEXT", help="filter by title (case-insensitive substring)")
     p.add_argument("--missing", choices=["overview", "rating", "genre", "year"], metavar="TEXT")
 
     watched = p.add_mutually_exclusive_group()
@@ -80,7 +81,9 @@ def handle(args, client: JellyfinClient):
     else:
         items = client.get_items(params)
 
-    # Client-side filters. max_rating has no server-side equivalent, same as movies.
+    # Client-side filters.
+    if args.title:
+        items = [i for i in items if args.title.lower() in i.get("Name", "").lower()]
     if args.max_rating is not None:
         items = [i for i in items if i.get("CommunityRating") and i["CommunityRating"] <= args.max_rating]
     if args.min_seasons is not None:
@@ -135,7 +138,12 @@ def handle(args, client: JellyfinClient):
     else:
         cols = COLUMNS
 
-    output.display([_to_row(i) for i in items], cols, args.format)
+    footer = None
+    if want_size:
+        total = sum(i.get("_size", 0) for i in items)
+        footer = {"Title": "Total", "Size": utils.format_bytes(total)}
+
+    output.display([_to_row(i) for i in items], cols, args.format, footer=footer)
 
 
 def _to_row(item: dict) -> dict:

@@ -3,7 +3,7 @@ import sys
 
 from jellystat import config
 from jellystat.client import JellyfinClient
-from jellystat.commands import movies, server, shows, special
+from jellystat.commands import movies, seasons, server, shows, special
 
 
 def main():
@@ -18,6 +18,7 @@ def main():
     server.register(subparsers)
     movies.register(subparsers)
     shows.register(subparsers)
+    seasons.register(subparsers)
     special.register(subparsers)
 
     args = parser.parse_args()
@@ -39,5 +40,7 @@ def main():
         movies.handle(args, client)
     elif args.command == "shows":
         shows.handle(args, client)
+    elif args.command == "seasons":
+        seasons.handle(args, client)
     elif args.command in ("stats", "forgotten", "rewatched", "recently-added"):
         special.handle(args, client)

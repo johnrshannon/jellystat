@@ -8,7 +8,7 @@ from rich.table import Table
 console = Console()
 
 
-def display(items: list[dict], columns: list[tuple[str, str]], fmt: str = "table") -> None:
+def display(items: list[dict], columns: list[tuple[str, str]], fmt: str = "table", footer: dict | None = None) -> None:
     if not items:
         console.print("[dim]No results.[/dim]")
         return
@@ -18,7 +18,7 @@ def display(items: list[dict], columns: list[tuple[str, str]], fmt: str = "table
     elif fmt == "csv":
         _csv(items, columns)
     else:
-        _table(items, columns)
+        _table(items, columns, footer=footer)
 
 
 def display_kv(pairs: list[tuple[str, str]], fmt: str = "table") -> None:
@@ -48,13 +48,14 @@ def add_library_args(parser) -> None:
     parser.add_argument("--exclude-library", metavar="TEXT", action="append", dest="exclude_library", help="exclude this library")
 
 
-def _table(items: list[dict], columns: list[tuple[str, str]]) -> None:
-    table = Table(show_header=True, header_style="bold", row_styles=["", "dim"])  # alternating dim rows for readability
+def _table(items: list[dict], columns: list[tuple[str, str]], footer: dict | None = None) -> None:
+    table = Table(show_header=True, header_style="bold", row_styles=["", "dim"], show_footer=bool(footer), footer_style="bold")
 
     for col in columns:
         header = col[0]
         justify = col[2] if len(col) > 2 else "left"
-        table.add_column(header, justify=justify)
+        footer_val = footer.get(col[1], "") if footer else ""
+        table.add_column(header, justify=justify, footer=footer_val)
 
     for item in items:
         table.add_row(*[_val(item.get(col[1])) for col in columns])
