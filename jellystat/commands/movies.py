@@ -53,13 +53,17 @@ def register(subparsers):
 
 
 def handle(args, client: JellyfinClient):
+    if not args.library and not args.exclude_library:
+        args.library = ["Movies"]
+
     params = {
-        "IncludeItemTypes": "Movie",
-        "Recursive":        "true",
-        "Fields":           FIELDS,
-        "UserId":           client.user_id,
-        "SortBy":           SORT_MAP.get(args.sort, "SortName"),
-        "SortOrder":        "Descending" if args.desc else "Ascending",
+        "IncludeItemTypes":      "Movie",
+        "Recursive":             "true",
+        "Fields":                FIELDS,
+        "UserId":                client.user_id,
+        "SortBy":                SORT_MAP.get(args.sort, "SortName"),
+        "SortOrder":             "Descending" if args.desc else "Ascending",
+        "CollapseBoxSetItems":   "false",  # show individual films even when grouped into a box set
     }
 
     if args.min_rating is not None:
