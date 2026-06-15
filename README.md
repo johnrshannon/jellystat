@@ -135,6 +135,73 @@ jellystat recently-added    Items added in the last N days, sorted by date
 
 ---
 
+## Examples
+
+How much content do you have?
+
+```
+jellystat movies --summary
+jellystat shows --summary
+jellystat movies --library MMA --summary
+```
+
+Longest shows by total runtime:
+
+```
+jellystat shows --sort runtime --desc --limit 10 --columns title,runtime
+```
+
+What 4K content haven't you watched yet?
+
+```
+jellystat movies --resolution 4k --unwatched
+jellystat shows --resolution 4k --unwatched
+```
+
+Highest rated films you haven't seen:
+
+```
+jellystat movies --min-rating 8.0 --unwatched --sort rating --desc
+```
+
+Everything added in the last two weeks:
+
+```
+jellystat recently-added --days 14
+```
+
+Shows you've started but the library doesn't know you finished (useful for finding things you dropped):
+
+```
+jellystat forgotten --type shows
+```
+
+All movies in a specific library:
+
+```
+jellystat movies --library "Films" --sort rating --desc
+```
+
+Runtime of a specific show:
+
+```
+jellystat shows --title-exact "The Sopranos" --summary
+```
+
+Storage breakdown by season for a specific show:
+
+```
+jellystat seasons "breaking bad"
+```
+
+Everything you've watched more than once:
+
+```
+jellystat rewatched --type movies
+```
+
+---
+
 ## Output
 
 All commands accept `--format [table|json|csv]`. Default is `table`. JSON output is suitable for piping to `jq`.
