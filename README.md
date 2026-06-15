@@ -67,79 +67,68 @@ jellystat server tasks       Scheduled tasks and last run status
 
 ### Library
 
-#### movies
+```
+jellystat movies    Query movies (defaults to the "Movies" library)
+jellystat shows     Query TV shows (searches all TV libraries)
+jellystat seasons   Storage and episode count per season for a single show
+```
 
-Defaults to a library named "Movies". Use `--library` to query a different one.
+All three support `--format table|json|csv`. `movies` and `shows` share these flags:
 
 ```
---title TEXT             filter by title (case-insensitive substring)
---title-exact TEXT       filter by exact title (case-insensitive)
+--title TEXT             case-insensitive substring match on title
+--title-exact TEXT       exact title match (case-insensitive)
 --min-rating FLOAT
 --max-rating FLOAT
---after N                released after this year
---before N               released before this year
+--after N                released/aired after this year
+--before N               released/aired before this year
 --genre TEXT
 --resolution TEXT        4k, 1080p, 720p, 480p
---min-runtime N
---max-runtime N
---min-size N             minimum file size in MB
---max-size N             maximum file size in MB
 --watched / --unwatched
+--missing TEXT           flag items missing metadata
+--sort TEXT              title, rating, year, added (plus command-specific options below)
+--desc
+--limit N
+--library TEXT           repeatable; filter to this library
+--exclude-library TEXT   repeatable; exclude this library
+--columns TEXT           comma-separated list of columns to show
+--summary                print totals instead of a table
+```
+
+Movies-specific:
+
+```
+--min-runtime / --max-runtime N
+--min-size / --max-size N        file size in MB
 --min-plays N
 --has-trailer
 --has-extras
---missing TEXT           overview, rating, genre, trailer, year
---sort TEXT              title, rating, year, added, runtime, filesize
---desc
---limit N
---library TEXT           repeatable
---exclude-library TEXT   repeatable
---columns TEXT           comma-separated: title, year, rating, runtime, genres, resolution, size
---summary                print total runtime and count instead of a table
---format table|json|csv
+--missing TEXT    overview, rating, genre, trailer, year
+--sort TEXT       also: runtime, filesize
+--columns TEXT    title, year, rating, runtime, genres, resolution, size
 ```
 
-#### shows
-
-Queries all TV libraries by default.
+Shows-specific:
 
 ```
---title TEXT             filter by title (case-insensitive substring)
---title-exact TEXT       filter by exact title (case-insensitive)
---min-rating FLOAT
---max-rating FLOAT
---after N                first aired after this year
---before N               first aired before this year
---genre TEXT
 --status ended|continuing
---min-seasons N
---max-seasons N
---resolution TEXT        4k, 1080p, 720p, 480p (matches if any episode is that resolution)
---watched / --unwatched
---missing TEXT           overview, rating, genre, year
---sort TEXT              title, rating, year, added, seasons, size, runtime
---desc
---limit N
---library TEXT           repeatable
---exclude-library TEXT   repeatable
---columns TEXT           comma-separated: title, year, rating, status, seasons, genres, size, resolution, runtime
---summary                print total runtime, episodes, seasons, and show count instead of a table
---format table|json|csv
+--min-seasons / --max-seasons N
+--missing TEXT    overview, rating, genre, year
+--sort TEXT       also: seasons, size, runtime
+--columns TEXT    title, year, rating, status, seasons, genres, size, resolution, runtime
 ```
 
-`--library` and `--exclude-library` are useful when you have multiple libraries of the same content type. Both flags can be repeated.
+`--library` and `--exclude-library` are useful when you have multiple libraries of the same content type:
 
 ```
 jellystat movies --exclude-library "MMA" --exclude-library "Comedy"
 jellystat movies --library "Movies" --columns title,year,rating
 ```
 
-#### seasons
-
-Storage and episode count broken down by season for a single show.
+`seasons` takes a show name as a positional argument:
 
 ```
-jellystat seasons "show name"
+jellystat seasons "breaking bad"
 ```
 
 ### Analytics
