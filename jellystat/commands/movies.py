@@ -50,6 +50,7 @@ def register(subparsers):
     p.add_argument("--sort", choices=list(SORT_MAP.keys()), default="title")
     p.add_argument("--desc", action="store_true")
     p.add_argument("--columns", metavar="TEXT", help="comma-separated list of columns to show (title,year,rating,runtime,genres,resolution,size)")
+    p.add_argument("--summary", action="store_true", help="print a single summary line instead of a table")
     output.add_library_args(p)
     output.add_output_args(p)
 
@@ -117,6 +118,11 @@ def handle(args, client: JellyfinClient):
 
     if args.limit:
         items = items[:args.limit]
+
+    if args.summary:
+        total_ticks = sum(i.get("RunTimeTicks") or 0 for i in items)
+        print(f"{utils.format_ticks(total_ticks)} across {len(items):,} movies")
+        return
 
     cols = COLUMNS
     if args.columns:

@@ -51,6 +51,7 @@ def register(subparsers):
     p.add_argument("--sort", choices=list(SORT_MAP.keys()), default="title")
     p.add_argument("--desc", action="store_true")
     p.add_argument("--columns", metavar="TEXT", help="comma-separated list of columns to show (title,year,rating,status,seasons,genres,size,runtime)")
+    p.add_argument("--summary", action="store_true", help="print a single summary line instead of a table")
     output.add_library_args(p)
     output.add_output_args(p)
 
@@ -104,7 +105,9 @@ def handle(args, client: JellyfinClient):
     col_set = {c.strip().lower() for c in args.columns.split(",")} if args.columns else set()
     want_size       = args.sort == "size"    or "size"    in col_set
     want_resolution = args.resolution        or "resolution" in col_set
-    want_runtime    = args.sort == "runtime" or "runtime" in col_set
+    want_runtime    = args.sort == "runtime" or "runtime" in col_set or args.summary
+
+    series_episode_counts: dict[str, int] = {}
 
     if want_size or want_resolution or want_runtime:
         fields = []
@@ -141,6 +144,7 @@ def handle(args, client: JellyfinClient):
                     series_resolutions.setdefault(sid, set()).add(res)
             if want_runtime:
                 series_runtime[sid] = series_runtime.get(sid, 0) + (ep.get("RunTimeTicks") or 0)
+                series_episode_counts[sid] = series_episode_counts.get(sid, 0) + 1
 
         for item in items:
             item["_size"] = series_sizes.get(item["Id"], 0)
@@ -171,6 +175,19 @@ def handle(args, client: JellyfinClient):
         if want_runtime:
             extra.append(RUNTIME_COLUMN)
         cols = COLUMNS + extra
+
+    if args.summary:
+        total_ticks    = sum(i.get("_runtime", 0) for i in items)
+        total_episodes = sum(series_episode_counts.get(i["Id"], 0) for i in items)
+        total_seasons  = sum(i.get("ChildCount", 0) for i in items)
+        total_shows    = len(items)
+        print(
+            f"{utils.format_ticks(total_ticks)} across "
+            f"{total_episodes:,} episodes, "
+            f"{total_seasons:,} seasons, "
+            f"{total_shows:,} shows"
+        )
+        return
 
     footer = None
     if want_size or want_runtime:
