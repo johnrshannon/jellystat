@@ -39,6 +39,17 @@ def runtime_str(item: dict) -> str:
     return f"{minutes}m" if minutes else ""
 
 
+def format_ticks(ticks: int) -> str:
+    if not ticks:
+        return ""
+    minutes = ticks // 600_000_000
+    hours, mins = divmod(minutes, 60)
+    if hours >= 24:
+        days, hrs = divmod(hours, 24)
+        return f"{days}d {hrs}h {mins}m"
+    return f"{hours}h {mins}m"
+
+
 def is_missing(item: dict, field: str) -> bool:
     checks = {
         "overview": lambda i: not i.get("Overview"),

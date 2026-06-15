@@ -10,6 +10,7 @@ SORT_MAP = {
     "added":   "DateCreated",
     "seasons": "SortName",  # sorted client-side
     "size":    "SortName",  # sorted client-side after episode fetch
+    "runtime": "SortName",  # sorted client-side after episode fetch
 }
 
 COLUMNS = [
@@ -21,9 +22,10 @@ COLUMNS = [
     ("Genres",  "Genres"),
 ]
 
-# Size and resolution live on episodes, not series — separate query, opt-in columns.
+# Size, resolution, and runtime live on episodes, not series — separate query, opt-in columns.
 SIZE_COLUMN       = ("Size",       "Size",       "right")
 RESOLUTION_COLUMN = ("Resolution", "Resolution", "center")
+RUNTIME_COLUMN    = ("Runtime",    "Runtime",    "right")
 
 
 def register(subparsers):
@@ -48,7 +50,7 @@ def register(subparsers):
 
     p.add_argument("--sort", choices=list(SORT_MAP.keys()), default="title")
     p.add_argument("--desc", action="store_true")
-    p.add_argument("--columns", metavar="TEXT", help="comma-separated list of columns to show (title,year,rating,status,seasons,genres,size)")
+    p.add_argument("--columns", metavar="TEXT", help="comma-separated list of columns to show (title,year,rating,status,seasons,genres,size,runtime)")
     output.add_library_args(p)
     output.add_output_args(p)
 
@@ -100,10 +102,11 @@ def handle(args, client: JellyfinClient):
         items.sort(key=lambda i: i.get("ChildCount", 0), reverse=args.desc)
 
     col_set = {c.strip().lower() for c in args.columns.split(",")} if args.columns else set()
-    want_size       = args.sort == "size" or "size" in col_set
-    want_resolution = args.resolution or "resolution" in col_set
+    want_size       = args.sort == "size"    or "size"    in col_set
+    want_resolution = args.resolution        or "resolution" in col_set
+    want_runtime    = args.sort == "runtime" or "runtime" in col_set
 
-    if want_size or want_resolution:
+    if want_size or want_resolution or want_runtime:
         fields = []
         if want_size:
             fields.append("MediaSources")
@@ -113,9 +116,10 @@ def handle(args, client: JellyfinClient):
         ep_params = {
             "IncludeItemTypes": "Episode",
             "Recursive":        "true",
-            "Fields":           ",".join(fields),
             "UserId":           client.user_id,
         }
+        if fields:
+            ep_params["Fields"] = ",".join(fields)
         if args.library or args.exclude_library:
             episodes = client.get_items_by_library(ep_params, include=args.library, exclude=args.exclude_library)
         else:
@@ -123,6 +127,7 @@ def handle(args, client: JellyfinClient):
 
         series_sizes: dict[str, int] = {}
         series_resolutions: dict[str, set] = {}
+        series_runtime: dict[str, int] = {}
         for ep in episodes:
             sid = ep.get("SeriesId")
             if not sid:
@@ -134,37 +139,46 @@ def handle(args, client: JellyfinClient):
                 res = utils.resolution(ep)
                 if res:
                     series_resolutions.setdefault(sid, set()).add(res)
+            if want_runtime:
+                series_runtime[sid] = series_runtime.get(sid, 0) + (ep.get("RunTimeTicks") or 0)
 
         for item in items:
             item["_size"] = series_sizes.get(item["Id"], 0)
             resolutions = series_resolutions.get(item["Id"], set())
             item["_resolution"] = "/".join(sorted(resolutions, key=lambda r: utils.RES_ORDER.get(r, -1)))
+            item["_runtime"] = series_runtime.get(item["Id"], 0)
 
     if args.resolution:
         items = [i for i in items if args.resolution in i.get("_resolution", "")]
 
     if args.sort == "size":
         items.sort(key=lambda i: i.get("_size", 0), reverse=args.desc)
+    if args.sort == "runtime":
+        items.sort(key=lambda i: i.get("_runtime", 0), reverse=args.desc)
 
     if args.limit:
         items = items[:args.limit]
 
-    all_cols = COLUMNS + [SIZE_COLUMN, RESOLUTION_COLUMN]
+    all_cols = COLUMNS + [SIZE_COLUMN, RESOLUTION_COLUMN, RUNTIME_COLUMN]
     if args.columns:
         cols = [col for col in all_cols if col[0].lower() in col_set]
-    elif want_size and not want_resolution:
-        cols = COLUMNS + [SIZE_COLUMN]
-    elif want_resolution and not want_size:
-        cols = COLUMNS + [RESOLUTION_COLUMN]
-    elif want_size and want_resolution:
-        cols = COLUMNS + [SIZE_COLUMN, RESOLUTION_COLUMN]
     else:
-        cols = COLUMNS
+        extra = []
+        if want_size:
+            extra.append(SIZE_COLUMN)
+        if want_resolution:
+            extra.append(RESOLUTION_COLUMN)
+        if want_runtime:
+            extra.append(RUNTIME_COLUMN)
+        cols = COLUMNS + extra
 
     footer = None
-    if want_size:
-        total = sum(i.get("_size", 0) for i in items)
-        footer = {"Title": "Total", "Size": utils.format_bytes(total)}
+    if want_size or want_runtime:
+        footer = {"Title": "Total"}
+        if want_size:
+            footer["Size"] = utils.format_bytes(sum(i.get("_size", 0) for i in items))
+        if want_runtime:
+            footer["Runtime"] = utils.format_ticks(sum(i.get("_runtime", 0) for i in items))
 
     output.display([_to_row(i) for i in items], cols, args.format, footer=footer)
 
@@ -180,4 +194,5 @@ def _to_row(item: dict) -> dict:
         "Genres":  ", ".join(item.get("Genres", [])[:2]),
         "Size":       utils.format_bytes(item.get("_size", 0)),
         "Resolution": item.get("_resolution", ""),
+        "Runtime":    utils.format_ticks(item.get("_runtime", 0)),
     }
