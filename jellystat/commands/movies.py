@@ -44,6 +44,8 @@ def register(subparsers):
     p.add_argument("--min-plays",  type=int, metavar="N")
     p.add_argument("--has-trailer", action="store_true")
     p.add_argument("--has-extras",  action="store_true")
+    p.add_argument("--title", metavar="TEXT", help="filter by title (case-insensitive substring)")
+    p.add_argument("--title-exact", metavar="TEXT", dest="title_exact", help="filter by exact title (case-insensitive)")
     p.add_argument("--missing", choices=["overview", "rating", "genre", "trailer", "year"], metavar="TEXT")
     p.add_argument("--sort", choices=list(SORT_MAP.keys()), default="title")
     p.add_argument("--desc", action="store_true")
@@ -94,6 +96,10 @@ def handle(args, client: JellyfinClient):
 
     # Client-side filters for things the API doesn't support natively.
     # min_rating maps to MinCommunityRating on the server; max_rating has no equivalent param.
+    if args.title:
+        items = [i for i in items if args.title.lower() in i.get("Name", "").lower()]
+    if args.title_exact:
+        items = [i for i in items if args.title_exact.lower() == i.get("Name", "").lower()]
     if args.max_rating is not None:
         items = [i for i in items if i.get("CommunityRating") and i["CommunityRating"] <= args.max_rating]
     if args.resolution:

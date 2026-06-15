@@ -37,7 +37,8 @@ def register(subparsers):
     p.add_argument("--status", choices=["ended", "continuing"], metavar="TEXT")
     p.add_argument("--min-seasons", type=int, metavar="N")
     p.add_argument("--max-seasons", type=int, metavar="N")
-    p.add_argument("--title",      metavar="TEXT", help="filter by title (case-insensitive substring)")
+    p.add_argument("--title",       metavar="TEXT", help="filter by title (case-insensitive substring)")
+    p.add_argument("--title-exact", metavar="TEXT", dest="title_exact", help="filter by exact title (case-insensitive)")
     p.add_argument("--resolution", metavar="TEXT", help="filter by resolution (e.g. 480p, 720p, 1080p, 4k) — matches if any episode is that resolution")
     p.add_argument("--missing", choices=["overview", "rating", "genre", "year"], metavar="TEXT")
 
@@ -85,6 +86,8 @@ def handle(args, client: JellyfinClient):
     # Client-side filters.
     if args.title:
         items = [i for i in items if args.title.lower() in i.get("Name", "").lower()]
+    if args.title_exact:
+        items = [i for i in items if args.title_exact.lower() == i.get("Name", "").lower()]
     if args.max_rating is not None:
         items = [i for i in items if i.get("CommunityRating") and i["CommunityRating"] <= args.max_rating]
     if args.min_seasons is not None:
