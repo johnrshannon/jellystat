@@ -67,47 +67,79 @@ jellystat server tasks       Scheduled tasks and last run status
 
 ### Library
 
-```
-jellystat movies    Query all movies
-jellystat shows     Query all TV shows
-```
+#### movies
 
-These query by content type across all libraries, regardless of how your libraries are named or organized.
-
-Both support:
+Defaults to a library named "Movies". Use `--library` to query a different one.
 
 ```
---min-rating / --max-rating FLOAT
---after / --before N
+--title TEXT             filter by title (case-insensitive substring)
+--title-exact TEXT       filter by exact title (case-insensitive)
+--min-rating FLOAT
+--max-rating FLOAT
+--after N                released after this year
+--before N               released before this year
 --genre TEXT
---min-runtime / --max-runtime N
+--resolution TEXT        4k, 1080p, 720p, 480p
+--min-runtime N
+--max-runtime N
+--min-size N             minimum file size in MB
+--max-size N             maximum file size in MB
 --watched / --unwatched
 --min-plays N
 --has-trailer
 --has-extras
 --missing TEXT           overview, rating, genre, trailer, year
---resolution TEXT        4k, 1080p, 720p, 480p
---min-size / --max-size N
---sort TEXT              title, rating, year, added, runtime
+--sort TEXT              title, rating, year, added, runtime, filesize
 --desc
---library TEXT           only include items from this library (repeatable)
---exclude-library TEXT   exclude items from this library (repeatable)
---columns TEXT           comma-separated list of columns to show
+--limit N
+--library TEXT           repeatable
+--exclude-library TEXT   repeatable
+--columns TEXT           comma-separated: title, year, rating, runtime, genres, resolution, size
+--summary                print total runtime and count instead of a table
+--format table|json|csv
 ```
 
-`--library` and `--exclude-library` are useful when you have multiple libraries of the same type — e.g., separate movie libraries for different users or categories. Both flags can be repeated.
+#### shows
+
+Queries all TV libraries by default.
 
 ```
-jellystat movies --exclude-library "MMA Fights" --exclude-library "Comedy Specials"
-jellystat movies --library "Films" --columns title,year,rating
+--title TEXT             filter by title (case-insensitive substring)
+--title-exact TEXT       filter by exact title (case-insensitive)
+--min-rating FLOAT
+--max-rating FLOAT
+--after N                first aired after this year
+--before N               first aired before this year
+--genre TEXT
+--status ended|continuing
+--min-seasons N
+--max-seasons N
+--resolution TEXT        4k, 1080p, 720p, 480p (matches if any episode is that resolution)
+--watched / --unwatched
+--missing TEXT           overview, rating, genre, year
+--sort TEXT              title, rating, year, added, seasons, size, runtime
+--desc
+--limit N
+--library TEXT           repeatable
+--exclude-library TEXT   repeatable
+--columns TEXT           comma-separated: title, year, rating, status, seasons, genres, size, resolution, runtime
+--summary                print total runtime, episodes, seasons, and show count instead of a table
+--format table|json|csv
 ```
 
-Shows also support:
+`--library` and `--exclude-library` are useful when you have multiple libraries of the same content type. Both flags can be repeated.
 
 ```
---status [ended|continuing]
---min-seasons / --max-seasons N
---sort seasons
+jellystat movies --exclude-library "MMA" --exclude-library "Comedy"
+jellystat movies --library "Movies" --columns title,year,rating
+```
+
+#### seasons
+
+Storage and episode count broken down by season for a single show.
+
+```
+jellystat seasons "show name"
 ```
 
 ### Analytics
@@ -179,7 +211,7 @@ jellystat forgotten --type shows
 All movies in a specific library:
 
 ```
-jellystat movies --library "Films" --sort rating --desc
+jellystat movies --library "MMA" --sort rating --desc
 ```
 
 Runtime of a specific show:
